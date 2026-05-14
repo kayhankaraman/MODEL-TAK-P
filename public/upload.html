@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Veri Yükle</title>
+<style>
+  body { font-family: sans-serif; max-width: 500px; margin: 80px auto; padding: 2rem; background: #f5f5f5; }
+  .card { background: #fff; border-radius: 12px; padding: 2rem; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+  h2 { margin: 0 0 1.5rem; font-size: 18px; }
+  .file-area { border: 2px dashed #ccc; border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; margin-bottom: 1rem; transition: all 0.2s; }
+  .file-area:hover { border-color: #2a2a28; background: #fafaf8; }
+  input[type=file] { display: none; }
+  .btn { width: 100%; padding: 12px; background: #2a2a28; color: #fff; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; }
+  .btn:disabled { background: #aaa; cursor: not-allowed; }
+  .status { margin-top: 1rem; padding: 12px; border-radius: 8px; font-size: 14px; display: none; }
+  .status.ok { background: #e1f5ee; color: #085041; display: block; }
+  .status.err { background: #fcebeb; color: #b91c1c; display: block; }
+  .status.loading { background: #faeeda; color: #633806; display: block; }
+  .file-name { font-size: 13px; color: #666; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>📦 Mevcut Veriyi Yükle</h2>
+  <p style="font-size:14px;color:#666;margin-bottom:1.5rem;">
+    Bilgisayarındaki <b>veri.json</b> dosyasını seç, verilerini sisteme aktar.
+  </p>
+
+  <div class="file-area" onclick="document.getElementById('fileInput').click()">
+    <div style="font-size:32px;margin-bottom:8px;">📂</div>
+    <div>veri.json dosyasını seç</div>
+    <div class="file-name" id="fileName">Henüz dosya seçilmedi</div>
+  </div>
+
+  <input type="file" id="fileInput" accept=".json,application/json" onchange="dosyaSec(this)">
+
+  <button class="btn" id="uploadBtn" onclick="yukle()" disabled>Yükle</button>
+
+  <div class="status" id="status"></div>
+</div>
+
+<script>
+let secilenVeri = null;
+
+function dosyaSec(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('fileName').textContent = file.name + ' (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)';
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      secilenVeri = JSON.parse(e.target.result);
+      if (!secilenVeri.kaliplar) throw new Error("Geçersiz format");
+      document.getElementById('uploadBtn').disabled = false;
+      showStatus('ok', '✓ ' + secilenVeri.kaliplar.length + ' kalıp bulundu. Yüklemek için butona bas.');
+    } catch(err) {
+      showStatus('err', '✗ Geçersiz dosya: ' + err.message);
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+async function yukle() {
+  if (!secilenVeri) return;
+  document.getElementById('uploadBtn').disabled = true;
+  showStatus('loading', '⏳ Yükleniyor, lütfen bekle... (büyük dosya olabilir)');
+
+  try {
+    const res = await fetch('/api/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(secilenVeri)
+    });
+
+    if (res.ok) {
+      showStatus('ok', '✅ Veriler başarıyla yüklendi! <a href="/" style="color:#085041;font-weight:bold;">→ Uygulamaya git</a>');
+    } else {
+      const err = await res.text();
+      showStatus('err', '✗ Sunucu hatası: ' + err);
+      document.getElementById('uploadBtn').disabled = false;
+    }
+  } catch(err) {
+    showStatus('err', '✗ Bağlantı hatası: ' + err.message);
+    document.getElementById('uploadBtn').disabled = false;
+  }
+}
+
+function showStatus(cls, msg) {
+  const el = document.getElementById('status');
+  el.className = 'status ' + cls;
+  el.innerHTML = msg;
+}
+</script>
+</body>
+</html>
