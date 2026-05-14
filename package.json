@@ -1,0 +1,8 @@
+{
+  "name": "kalip-takip",
+  "version": "1.0.0",
+  "description": "Kalıp & Model Takip Programı",
+  "dependencies": {
+    "@vercel/kv": "^2.0.0"
+  }
+}

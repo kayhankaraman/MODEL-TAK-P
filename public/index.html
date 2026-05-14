@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalıp & Model Takibi</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #F7F5F0; --surface: #FFFFFF; --surface2: #F0EDE8;
+    --border: #E2DDD7; --border2: #CCC8C2; --text: #1A1A18;
+    --text2: #6B6860; --text3: #A09D98; --green: #1D9E75;
+    --green-bg: #E1F5EE; --green-text: #085041; --amber: #BA7517;
+    --amber-bg: #FAEEDA; --amber-text: #633806; --red: #E24B4A;
+    --red-bg: #FCEBEB; --accent: #2A2A28;
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; line-height: 1.5; }
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; gap: 12px; }
+  .topbar-logo { font-size: 15px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .topbar-logo span { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); font-weight: 400; text-transform: uppercase; }
+  .topbar-right { display: flex; gap: 6px; align-items: center; }
+  .stat-pill { background: var(--surface2); border-radius: 99px; padding: 4px 12px; font-size: 12px; color: var(--text2); white-space: nowrap; }
+  .stat-pill b { font-weight: 600; color: var(--text); }
+  .stat-pill.warn b { color: var(--amber); }
+  .save-indicator { font-size: 12px; display: flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 99px; white-space: nowrap; }
+  .save-indicator.saved { color: var(--green); background: var(--green-bg); }
+  .save-indicator.saving { color: var(--amber); background: var(--amber-bg); }
+  .save-indicator.error { color: var(--red); background: var(--red-bg); }
+  .durum-cizilecek { color: #6B6860; }
+  .durum-renklendirilecek { color: #6D28D9; }
+  .durum-duzeltilecek { color: #B45309; }
+  .durum-ayaga { color: #0369A1; }
+  .durum-yapildi { color: #065F46; }
+  .main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .section-title { font-size: 12px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; font-family: 'DM Mono', monospace; }
+  .btn { background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 7px 14px; font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; color: var(--text); display: inline-flex; align-items: center; gap: 5px; transition: all 0.15s; white-space: nowrap; }
+  .btn:hover { background: var(--surface2); }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { background: #3a3a38; }
+  .kalip-list { display: flex; flex-direction: column; gap: 12px; }
+  .kalip-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: box-shadow 0.15s; }
+  .kalip-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .kalip-card.dragging { opacity: 0.5; }
+  .kalip-card.drag-over { border-top: 3px solid var(--accent); }
+  .kalip-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; cursor: pointer; user-select: none; gap: 12px; }
+  .kalip-header:hover { background: #FAFAF8; }
+  .kalip-left { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
+  .drag-handle { cursor: grab; color: var(--text3); font-size: 16px; padding: 4px; display: flex; align-items: center; flex-shrink: 0; }
+  .drag-handle:active { cursor: grabbing; }
+  .kalip-icon { width: 38px; height: 38px; border-radius: 8px; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .kalip-info { flex: 1; min-width: 0; }
+  .kalip-name { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kalip-meta { font-size: 12px; color: var(--text3); display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+  .progress-wrap { width: 60px; height: 4px; background: var(--surface2); border-radius: 99px; overflow: hidden; display: inline-block; vertical-align: middle; }
+  .progress-fill { height: 100%; border-radius: 99px; transition: width 0.4s; }
+  .progress-fill.done { background: var(--green); }
+  .progress-fill.partial { background: var(--amber); }
+  .progress-fill.none { background: var(--border2); }
+  .badge { font-size: 11px; padding: 3px 9px; border-radius: 99px; font-weight: 500; white-space: nowrap; }
+  .badge-done { background: var(--green-bg); color: var(--green-text); }
+  .badge-warn { background: var(--amber-bg); color: var(--amber-text); }
+  .kalip-right { display: flex; align-items: center; gap: 6px; }
+  .chevron { color: var(--text3); font-size: 11px; transition: transform 0.2s; display: inline-block; }
+  .chevron.open { transform: rotate(180deg); }
+  .btn-icon { background: transparent; border: none; cursor: pointer; color: var(--text3); padding: 4px 8px; border-radius: 6px; font-size: 12px; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+  .btn-icon:hover { background: var(--surface2); color: var(--text2); }
+  .btn-icon.del:hover { background: var(--red-bg); color: var(--red); }
+  .modeller-grid { padding: 12px 18px 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; border-top: 1px solid var(--border); }
+  .model-card { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; cursor: pointer; transition: all 0.15s; position: relative; background: var(--surface); }
+  .model-card:hover { border-color: var(--border2); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .model-card.eksik { border-style: dashed; background: var(--surface2); }
+  .model-img-wrap { width: 100%; height: 90px; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 28px; overflow: hidden; }
+  .model-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+  .model-body { padding: 8px 10px; }
+  .model-kod { font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+  .model-kod.empty { color: var(--text3); font-family: 'DM Sans', sans-serif; font-weight: 400; }
+  .model-renk { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+  .model-durum { font-size: 10px; display: flex; align-items: center; gap: 4px; }
+  .model-not { font-size: 10px; color: #DC2626; font-weight: 600; margin-top: 4px; padding: 3px 6px; background: #FEF2F2; border-radius: 4px; border-left: 2px solid #DC2626; line-height: 1.3; word-break: break-word; }
+  .btn-del-model { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.55); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: pointer; display: none; align-items: center; justify-content: center; padding: 0; }
+  .model-card:hover .btn-del-model { display: flex; }
+  .add-model-btn { border: 1px dashed var(--border2); border-radius: 10px; min-height: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; color: var(--text3); font-size: 12px; background: transparent; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
+  .add-model-btn:hover { background: var(--surface2); color: var(--text2); }
+  .add-model-btn .plus { font-size: 24px; font-weight: 300; line-height: 1; }
+  .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text3); font-size: 14px; }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state p { margin-bottom: 16px; }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+  .modal { background: var(--surface); border-radius: 14px; border: 1px solid var(--border); padding: 1.5rem; width: 360px; max-width: 100%; box-shadow: 0 8px 32px rgba(0,0,0,0.12); }
+  .modal-title { font-size: 15px; font-weight: 600; margin-bottom: 1.25rem; color: var(--text); }
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 12px; font-weight: 500; color: var(--text2); display: block; margin-bottom: 5px; }
+  .form-input, .form-select { width: 100%; padding: 9px 12px; border: 1px solid var(--border2); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; appearance: none; }
+  .form-input:focus, .form-select:focus { outline: none; border-color: var(--accent); }
+  .form-input::placeholder { color: var(--text3); }
+  .img-preview { width: 100%; height: 110px; object-fit: cover; border-radius: 8px; margin-top: 8px; border: 1px solid var(--border); }
+  .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.25rem; }
+  .hint { font-size: 11px; color: var(--text3); margin-left: 4px; font-weight: 400; }
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--accent); color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 13px; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 2000; display: flex; align-items: center; justify-content: center; cursor: zoom-out; opacity: 0; transition: opacity 0.25s; padding: 2rem; }
+  .lightbox.show { opacity: 1; }
+  .lightbox img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,0.4); }
+  .lightbox-close { position: absolute; top: 20px; right: 24px; background: rgba(255,255,255,0.2); border: none; color: #fff; font-size: 24px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .lightbox-close:hover { background: rgba(255,255,255,0.35); }
+  .lightbox-info { position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); color: #fff; padding: 8px 18px; border-radius: 8px; font-size: 13px; text-align: center; }
+  .model-img-wrap img { cursor: zoom-in; }
+  .conn-bar { padding: 8px 2rem; font-size: 12px; border-bottom: 1px solid; display: none; }
+  .conn-bar.ok { background: var(--green-bg); color: var(--green-text); border-color: #9FE1CB; }
+  .conn-bar.err { background: #DC2626; color: #fff; border-color: #B91C1C; display: block; font-size: 14px; font-weight: 600; padding: 12px 2rem; text-align: center; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+  @media (max-width: 640px) {
+    .topbar { padding: 0 1rem; }
+    .main { padding: 1rem; }
+    .modeller-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+    .stat-pill { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-logo">👟 Kalıp Takibi <span>v8.0</span></div>
+  <div class="topbar-right">
+    <div id="topbar-stats" style="display:flex;gap:6px;"></div>
+    <div class="save-indicator saved" id="save-indicator">✓ Kaydedildi</div>
+  </div>
+</div>
+<div class="conn-bar" id="conn-bar">🚨 DİKKAT: Sunucuya bağlanılamıyor! Verileriniz KAYDEDİLMİYOR. Sayfayı yenilemeyi deneyin.</div>
+
+<div class="main">
+  <div class="section-header">
+    <div class="section-title">Kalıplar</div>
+    <button class="btn btn-primary" onclick="yeniKalipAc()">+ Yeni kalıp</button>
+  </div>
+  <div class="kalip-list" id="kalip-list"></div>
+</div>
+<div id="modal-container"></div>
+<div class="toast" id="toast"></div>
+<div class="lightbox" id="lightbox" onclick="lightboxKapat()">
+  <button class="lightbox-close" onclick="lightboxKapat()">×</button>
+  <img id="lightbox-img" src="" alt="">
+  <div class="lightbox-info" id="lightbox-info"></div>
+</div>
+
+<script>
+const API = "";
+let state = { kaliplar: [], nextKid: 1, nextMid: 1 };
+let saveTimer = null;
+let dragSrcId = null;
+
+// Sunucudan veri yükle
+async function yukle() {
+  try {
+    const r = await fetch(API + "/api/load");
+    if (r.ok) {
+      const d = await r.json();
+      if (d && d.kaliplar) state = d;
+      document.getElementById("conn-bar").className = "conn-bar ok";
+      document.getElementById("conn-bar").style.display = "none";
+      // localStorage'a da yedekle
+      try { localStorage.setItem("kalip_yedek", JSON.stringify(state)); } catch(e) {}
+    }
+  } catch(e) {
+    // Sunucu kapalı - localStorage'dan kurtarmayı dene
+    try {
+      const yedek = localStorage.getItem("kalip_yedek");
+      if (yedek) {
+        const d = JSON.parse(yedek);
+        if (d && d.kaliplar && d.kaliplar.length > 0) state = d;
+      }
+    } catch(e2) {}
+    document.getElementById("conn-bar").className = "conn-bar err";
+    document.getElementById("conn-bar").style.display = "block";
+    setSave("error", "✗ SUNUCU HATASI");
+  }
+  render();
+  // Her 10 saniyede bağlantı kontrolü
+  setInterval(sunucuKontrol, 10000);
+}
+
+async function sunucuKontrol() {
+  try {
+    const r = await fetch(API + "/api/ping");
+    if (r.ok) {
+      if (document.getElementById("conn-bar").style.display === "block") {
+        // Sunucu geri geldi! Bekleyen verileri kaydet
+        document.getElementById("conn-bar").style.display = "none";
+        document.getElementById("conn-bar").className = "conn-bar ok";
+        setSave("saving", "● Yeniden kaydediliyor...");
+        try {
+          const r2 = await fetch(API + "/api/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(state)
+          });
+          if (r2.ok) {
+            setSave("saved", "✓ Kaydedildi");
+            showToast("Sunucu geri geldi, veriler kaydedildi ✓");
+          }
+        } catch(e) {}
+      }
+    } else { throw new Error(); }
+  } catch(e) {
+    document.getElementById("conn-bar").className = "conn-bar err";
+    document.getElementById("conn-bar").style.display = "block";
+    setSave("error", "✗ SUNUCU HATASI");
+  }
+}
+
+// Sunucuya kaydet (dosyaya yazar) + localStorage yedek
+function save() {
+  clearTimeout(saveTimer);
+  setSave("saving", "● Kaydediliyor...");
+  // Her zaman localStorage'a yedekle
+  try { localStorage.setItem("kalip_yedek", JSON.stringify(state)); } catch(e) {}
+  saveTimer = setTimeout(async () => {
+    try {
+      const r = await fetch(API + "/api/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(state)
+      });
+      if (r.ok) {
+        setSave("saved", "✓ Kaydedildi");
+        document.getElementById("conn-bar").style.display = "none";
+      } else {
+        setSave("error", "✗ KAYIT HATASI");
+        document.getElementById("conn-bar").className = "conn-bar err";
+        document.getElementById("conn-bar").style.display = "block";
+      }
+    } catch(e) {
+      setSave("error", "✗ SUNUCU HATASI");
+      document.getElementById("conn-bar").className = "conn-bar err";
+      document.getElementById("conn-bar").style.display = "block";
+    }
+  }, 500);
+}
+
+function setSave(cls, txt) {
+  const el = document.getElementById("save-indicator");
+  el.className = "save-indicator " + cls;
+  el.textContent = txt;
+}
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+function resimBuyut(imgEl) {
+  const lb = document.getElementById("lightbox");
+  document.getElementById("lightbox-img").src = imgEl.src;
+  const kod = imgEl.getAttribute("data-kod") || "";
+  const renk = imgEl.getAttribute("data-renk") || "";
+  var info = "";
+  if (kod) info += kod;
+  if (renk) info += (info ? " — " : "") + renk;
+  document.getElementById("lightbox-info").textContent = info;
+  document.getElementById("lightbox-info").style.display = info ? "block" : "none";
+  lb.style.display = "flex";
+  setTimeout(() => lb.classList.add("show"), 10);
+}
+
+function lightboxKapat() {
+  const lb = document.getElementById("lightbox");
+  lb.classList.remove("show");
+  setTimeout(() => { lb.style.display = "none"; }, 250);
+}
+
+function render() { renderStats(); renderKaliplar(); }
+
+function renderStats() {
+  const yapilan = state.kaliplar.reduce((s,k) => s+k.modeller.filter(m=>m.durum==="yapildi").length, 0);
+  const eksik = state.kaliplar.reduce((s,k) => s+Math.max(0,(k.hedef||7)-k.modeller.filter(m=>m.durum==="yapildi").length), 0);
+  document.getElementById("topbar-stats").innerHTML =
+    '<div class="stat-pill"><b>'+state.kaliplar.length+'</b> kalıp</div>' +
+    '<div class="stat-pill"><b>'+yapilan+'</b> yapıldı</div>' +
+    '<div class="stat-pill warn"><b>'+eksik+'</b> eksik</div>';
+}
+
+function renderKaliplar() {
+  const el = document.getElementById("kalip-list");
+  if (!state.kaliplar.length) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">🧱</div><p>Henüz kalıp yok.<br>İlk kalıbını ekleyerek başla.</p><button class="btn btn-primary" onclick="yeniKalipAc()">+ Yeni kalıp ekle</button></div>';
+    return;
+  }
+  el.innerHTML = state.kaliplar.map(k => kalipHTML(k)).join("");
+}
+
+function kalipHTML(k) {
+  const hedef = k.hedef || 7;
+  const yapilan = k.modeller.filter(m=>m.durum==="yapildi").length;
+  const pct = Math.min(100, Math.round((yapilan/hedef)*100));
+  const barClass = pct===100?"done":pct>0?"partial":"none";
+  const badge = pct===100 ? '<span class="badge badge-done">Tamamlandı</span>' : '<span class="badge badge-warn">'+(hedef-yapilan)+' model eksik</span>';
+  return '<div class="kalip-card" draggable="true" data-kid="'+k.id+'" ondragstart="onDragStart(event,'+k.id+')" ondragover="onDragOver(event)" ondragenter="onDragEnter(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'+k.id+')" ondragend="onDragEnd(event)">' +
+    '<div class="kalip-header" onclick="toggleKalip('+k.id+')">' +
+      '<div class="kalip-left">' +
+        '<div class="drag-handle" title="Sıralamak için sürükle">⠿</div>' +
+        '<div class="kalip-icon">🧱</div>' +
+        '<div class="kalip-info">' +
+          '<div class="kalip-name">'+escHtml(k.ad)+'</div>' +
+          '<div class="kalip-meta">'+yapilan+'/'+hedef+' model <span class="progress-wrap"><span class="progress-fill '+barClass+'" style="width:'+pct+'%"></span></span></div>' +
+        '</div>' +
+        badge +
+      '</div>' +
+      '<div class="kalip-right">' +
+        '<button class="btn-icon" onclick="event.stopPropagation();kalipDuzenleAc('+k.id+')" title="Düzenle">✎</button>' +
+        '<button class="btn-icon del" onclick="event.stopPropagation();kalipSil('+k.id+')" title="Sil">Sil</button>' +
+        '<span class="chevron '+(k.acik?"open":"")+'">▼</span>' +
+      '</div>' +
+    '</div>' +
+    (k.acik ? '<div class="modeller-grid">'+k.modeller.map(m=>modelHTML(k.id,m)).join("")+'<div class="add-model-btn" onclick="modelEkleAc('+k.id+')"><span class="plus">+</span><span>Model ekle</span></div></div>' : '') +
+  '</div>';
+}
+
+function onDragStart(e,kid) { dragSrcId=kid; e.target.classList.add("dragging"); e.dataTransfer.effectAllowed="move"; }
+function onDragOver(e) { e.preventDefault(); }
+function onDragEnter(e) { e.preventDefault(); const c=e.target.closest(".kalip-card"); if(c) c.classList.add("drag-over"); }
+function onDragLeave(e) { const c=e.target.closest(".kalip-card"); if(c) c.classList.remove("drag-over"); }
+function onDrop(e,tid) {
+  e.preventDefault();
+  const c=e.target.closest(".kalip-card"); if(c) c.classList.remove("drag-over");
+  if(dragSrcId===null||dragSrcId===tid) return;
+  const a=state.kaliplar, si=a.findIndex(k=>k.id===dragSrcId), ti=a.findIndex(k=>k.id===tid);
+  if(si<0||ti<0) return;
+  const [m]=a.splice(si,1); a.splice(ti,0,m);
+  save(); render();
+}
+function onDragEnd(e) { dragSrcId=null; document.querySelectorAll(".kalip-card").forEach(c=>{c.classList.remove("dragging","drag-over");}); }
+
+function getDurumInfo(durum) {
+  var map = {
+    "cizilecek":        { label: "Çizilecek",        cls: "cizilecek",        dot: "#A09D98" },
+    "renklendirilecek": { label: "Renklendirilecek", cls: "renklendirilecek", dot: "#6D28D9" },
+    "duzeltilecek":     { label: "Model Düzelecek",  cls: "duzeltilecek",     dot: "#B45309" },
+    "ayaga":            { label: "Ayağa Denenecek",  cls: "ayaga",            dot: "#0369A1" },
+    "yapildi":          { label: "Yapıldı",           cls: "yapildi",          dot: "#1D9E75" }
+  };
+  return map[durum] || map["cizilecek"];
+}
+
+function modelHTML(kid, m) {
+  var d = getDurumInfo(m.durum || "cizilecek");
+  var yapildi = m.durum === "yapildi";
+  return '<div class="model-card '+(yapildi?"":"eksik")+'" onclick="modelDuzenleAc('+kid+','+m.id+')">' +
+    '<button class="btn-del-model" onclick="event.stopPropagation();modelSil('+kid+','+m.id+')">×</button>' +
+    '<div class="model-img-wrap">'+(m.img?'<img src="'+m.img+'" alt="" data-kod="'+escHtml(m.kod||"")+'" data-renk="'+escHtml(m.renk||"")+'" onclick="event.stopPropagation();resimBuyut(this)">':'<span>👟</span>')+'</div>' +
+    '<div class="model-body">' +
+      '<div class="model-kod '+(m.kod?"":"empty")+'">'+(m.kod?escHtml(m.kod):"Kod yok")+'</div>' +
+      '<div class="model-renk">'+escHtml(m.renk||"-")+'</div>' +
+      '<div class="model-durum"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:'+d.dot+';margin-right:4px;"></span><span class="durum-'+d.cls+'">'+d.label+'</span></div>' +
+      (m.not ? '<div class="model-not">📌 '+escHtml(m.not)+'</div>' : '') +
+    '</div>' +
+  '</div>';
+}
+
+function toggleKalip(id) { var k=state.kaliplar.find(function(x){return x.id===id}); if(k) k.acik=!k.acik; save(); render(); }
+function kalipSil(id) { if(!confirm("Bu kalıbı silmek istiyor musun?")) return; state.kaliplar=state.kaliplar.filter(function(k){return k.id!==id}); save(); render(); }
+function modelSil(kid,mid) { var k=state.kaliplar.find(function(x){return x.id===kid}); if(k) k.modeller=k.modeller.filter(function(m){return m.id!==mid}); save(); render(); }
+
+function yeniKalipAc() {
+  showModal('<div class="modal-title">Yeni kalıp ekle</div>' +
+    '<div class="form-group"><label class="form-label">Kalıp adı</label>' +
+    '<input class="form-input" id="m-kalip-ad" type="text" placeholder="Örn: 12178 ZENNE" autofocus></div>' +
+    '<div class="form-group"><label class="form-label">Hedef model sayısı</label>' +
+    '<input class="form-input" id="m-kalip-hedef" type="number" min="1" max="50" value="7" style="width:80px;"></div>' +
+    '<div class="modal-footer"><button class="btn" onclick="closeModal()">İptal</button><button class="btn btn-primary" onclick="kalipKaydet()">Ekle</button></div>');
+}
+
+function kalipKaydet() {
+  var ad=document.getElementById("m-kalip-ad").value.trim();
+  if(!ad){document.getElementById("m-kalip-ad").focus();return;}
+  var hedef=parseInt(document.getElementById("m-kalip-hedef").value)||7;
+  state.kaliplar.push({id:state.nextKid++,ad:ad,hedef:hedef,acik:true,modeller:[]});
+  save(); closeModal(); render();
+}
+
+function kalipDuzenleAc(kid) {
+  var k=state.kaliplar.find(function(x){return x.id===kid});
+  if(!k) return;
+  showModal('<div class="modal-title">Kalıbı düzenle</div>' +
+    '<div class="form-group"><label class="form-label">Kalıp adı</label>' +
+    '<input class="form-input" id="m-kalip-ad" type="text" value="'+escHtml(k.ad)+'" autofocus></div>' +
+    '<div class="form-group"><label class="form-label">Hedef model sayısı</label>' +
+    '<input class="form-input" id="m-kalip-hedef" type="number" min="1" max="50" value="'+(k.hedef||7)+'" style="width:80px;"></div>' +
+    '<div class="modal-footer"><button class="btn" onclick="closeModal()">İptal</button><button class="btn btn-primary" onclick="kalipGuncelle('+kid+')">Kaydet</button></div>');
+}
+
+function kalipGuncelle(kid) {
+  var k=state.kaliplar.find(function(x){return x.id===kid});
+  if(!k) return;
+  var ad=document.getElementById("m-kalip-ad").value.trim();
+  if(!ad){document.getElementById("m-kalip-ad").focus();return;}
+  k.ad=ad;
+  k.hedef=parseInt(document.getElementById("m-kalip-hedef").value)||7;
+  save(); closeModal(); render();
+}
+
+function modelEkleAc(kid) { showModelModal(kid,null); }
+function modelDuzenleAc(kid,mid) {
+  var k=state.kaliplar.find(function(x){return x.id===kid});
+  var m=k&&k.modeller.find(function(x){return x.id===mid});
+  if(!m) return;
+  showModelModal(kid,m);
+}
+
+function showModelModal(kid,model) {
+  var isEdit=!!model;
+  var m=model||{kod:"",renk:"",img:null,durum:"cizilecek",not:""};
+  showModal('<div class="modal-title">'+(isEdit?"Modeli düzenle":"Yeni model ekle")+'</div>' +
+    '<div class="form-group"><label class="form-label">Model kodu <span class="hint">(boş bırakılabilir)</span></label>' +
+    '<input class="form-input" id="m-kod" type="text" placeholder="KA-001" value="'+escHtml(m.kod||"")+'"></div>' +
+    '<div class="form-group"><label class="form-label">Renk</label>' +
+    '<input class="form-input" id="m-renk" type="text" placeholder="Siyah, Kahve, Bej..." value="'+escHtml(m.renk||"")+'"></div>' +
+    '<div class="form-group"><label class="form-label">Durum</label>' +
+    '<select class="form-select" id="m-durum">' +
+      '<option value="cizilecek" '+((m.durum||"cizilecek")==="cizilecek"?"selected":"")+'>✏️ Çizilecek</option>' +
+      '<option value="renklendirilecek" '+(m.durum==="renklendirilecek"?"selected":"")+'>🎨 Renklendirilecek</option>' +
+      '<option value="duzeltilecek" '+(m.durum==="duzeltilecek"?"selected":"")+'>🔧 Model Düzelecek</option>' +
+      '<option value="ayaga" '+(m.durum==="ayaga"?"selected":"")+'>👠 Ayağa Denenecek</option>' +
+      '<option value="yapildi" '+(m.durum==="yapildi"?"selected":"")+'>✅ Yapıldı</option>' +
+    '</select></div>' +
+    '<div class="form-group"><label class="form-label">Not <span class="hint">(kırmızı olarak görünür)</span></label>' +
+    '<input class="form-input" id="m-not" type="text" placeholder="Örn: Topuk yükseltilecek, taban değişecek..." value="'+escHtml(m.not||"")+'"></div>' +
+    '<div class="form-group"><label class="form-label">Resim <span class="hint">(isteğe bağlı)</span></label>' +
+    '<input class="form-input" id="m-img-file" type="file" accept="image/*" onchange="onImgChange(this)" style="padding:6px 10px;">' +
+    '<div id="img-preview-wrap">'+(m.img?'<img class="img-preview" src="'+m.img+'">':'')+'</div>' +
+    '<input type="hidden" id="m-img-data" value="'+(m.img||"")+'"></div>' +
+    '<div class="modal-footer"><button class="btn" onclick="closeModal()">İptal</button>' +
+    '<button class="btn btn-primary" onclick="modelKaydet('+kid+','+(isEdit?m.id:"null")+')">'+(isEdit?"Kaydet":"Ekle")+'</button></div>');
+}
+
+function onImgChange(input) {
+  var file=input.files[0]; if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    document.getElementById("m-img-data").value=e.target.result;
+    document.getElementById("img-preview-wrap").innerHTML='<img class="img-preview" src="'+e.target.result+'">';
+  };
+  reader.readAsDataURL(file);
+}
+
+function modelKaydet(kid,mid) {
+  var kod=document.getElementById("m-kod").value.trim()||null;
+  var renk=document.getElementById("m-renk").value.trim();
+  var durum=document.getElementById("m-durum").value;
+  var not_text=document.getElementById("m-not").value.trim()||null;
+  var img=document.getElementById("m-img-data").value||null;
+  var k=state.kaliplar.find(function(x){return x.id===kid}); if(!k) return;
+  if(mid===null) k.modeller.push({id:state.nextMid++,kod:kod,renk:renk,img:img,durum:durum,not:not_text});
+  else { var m=k.modeller.find(function(x){return x.id===mid}); if(m){m.kod=kod;m.renk=renk;m.img=img;m.durum=durum;m.not=not_text;} }
+  save(); closeModal(); render();
+}
+
+function showModal(html) {
+  document.getElementById("modal-container").innerHTML='<div class="modal-overlay" onclick="overlayClick(event)"><div class="modal">'+html+'</div></div>';
+}
+function closeModal() { document.getElementById("modal-container").innerHTML=""; }
+function overlayClick(e) { if(e.target.classList.contains("modal-overlay")) closeModal(); }
+function escHtml(str) { return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+yukle();
+</script>
+</body>
+</html>
